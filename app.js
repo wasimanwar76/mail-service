@@ -8,20 +8,22 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
+// ✅ Middleware
+app.use(cors({ origin: "*" }));
 app.use(express.json());
-app.use(cors()); // Enable CORS if frontend is on another domain
+app.use(express.urlencoded({ extended: true }));
 
-// POST /contact endpoint
+// ✅ POST /contact endpoint
 app.post("/contact", async (req, res) => {
+  console.log("Received body:", req.body); // 🧠 Debug line
+
   try {
-    const { name, email, message } = req.body;
+    const { name, email, message } = req.body || {};
 
     if (!name || !email || !message) {
       return res.status(400).json({ error: "All fields are required." });
     }
 
-    // Configure Nodemailer
     const transporter = nodemailer.createTransport({
       host: "smtp.hostinger.com",
       port: 465,
@@ -32,28 +34,31 @@ app.post("/contact", async (req, res) => {
       },
     });
 
-    // Email to website owner
     const ownerMailOptions = {
       from: process.env.EMAIL_USER,
       to: process.env.OWNER_EMAIL || process.env.EMAIL_USER,
       subject: `New Contact Form Submission from ${name}`,
-      html: `<p><strong>Name:</strong> ${name}</p>
-             <p><strong>Email:</strong> ${email}</p>
-             <p><strong>Message:</strong> ${message}</p>`,
+      html: `
+        <h2>New Contact Message</h2>
+        <p><strong>Name:</strong> ${name}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Message:</strong> ${message}</p>
+      `,
     };
 
-    // Confirmation email to customer
     const customerMailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
       subject: "We Received Your Message - A.S.N Electromechanical Contracting",
-      html: `<p>Dear ${name},</p>
-             <p>Thank you for reaching out! We received your message and will respond within 24 hours.</p>
-             <p>Your message: ${message.substring(0, 200)}${message.length > 200 ? "..." : ""}</p>
-             <p>Best regards,<br>A.S.N Electromechanical Contracting Team</p>`,
+      html: `
+        <p>Dear ${name},</p>
+        <p>Thank you for reaching out! We received your message and will respond within 24 hours.</p>
+        <p>Your message:</p>
+        <blockquote>${message}</blockquote>
+        <p>Best regards,<br>A.S.N Electromechanical Contracting Team</p>
+      `,
     };
 
-    // Send emails
     await transporter.sendMail(ownerMailOptions);
     await transporter.sendMail(customerMailOptions);
 
@@ -64,12 +69,11 @@ app.post("/contact", async (req, res) => {
   }
 });
 
-// Root route
+// ✅ Root route
 app.get("/", (req, res) => {
   res.send("Contact API is running!");
 });
 
-// Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
